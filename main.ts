@@ -54,28 +54,56 @@ import { join } from "node:path";
 // would actually print: short, self-contained, clear without the sentence
 // it interrupted. (5) Every word earns its place; at 91 characters there
 // is no padding to fill the line.
-const SELECTED_LINE =
-  "Error: token budget exhausted. " +
-  "The punchline was in the next token. " +
-  "There is no next token.";
+
+// The chosen line is assembled from its three sentences so each part can
+// be checked and reasoned about on its own.
+const LINE_PARTS = [
+  "Error: token budget exhausted.",
+  "The punchline was in the next token.",
+  "There is no next token.",
+] as const;
 
 const MAX_CHARS = 140;
 
-function main(): void {
-  if ([...SELECTED_LINE].length > MAX_CHARS) {
-    throw new Error(
-      `Selected line is ${[...SELECTED_LINE].length} characters, over the ${MAX_CHARS} limit.`,
-    );
-  }
-  if (SELECTED_LINE.trim().length === 0) {
+function joinParts(parts: readonly string[]): string {
+  return parts.join(" ");
+}
+
+function countChars(text: string): number {
+  return [...text].length;
+}
+
+function buildSelectedLine(): string {
+  return joinParts(LINE_PARTS);
+}
+
+function validateLine(line: string): void {
+  if (line.trim().length === 0) {
     throw new Error("Selected line must not be blank.");
   }
+  const length = countChars(line);
+  if (length > MAX_CHARS) {
+    throw new Error(
+      `Selected line is ${length} characters, over the ${MAX_CHARS} limit.`,
+    );
+  }
+}
 
-  const outputDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+function resolveOutputDir(): string {
+  return process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+}
+
+function writeEntry(outputDir: string, line: string): void {
   mkdirSync(outputDir, { recursive: true });
   // A single trailing newline: the gate counts the text's characters, and
   // the file holds exactly the chosen line plus this line ending.
-  writeFileSync(join(outputDir, "entry.txt"), SELECTED_LINE + "\n", "utf8");
+  writeFileSync(join(outputDir, "entry.txt"), line + "\n", "utf8");
+}
+
+function main(): void {
+  const selectedLine = buildSelectedLine();
+  validateLine(selectedLine);
+  writeEntry(resolveOutputDir(), selectedLine);
 }
 
 main();
